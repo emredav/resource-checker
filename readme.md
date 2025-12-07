@@ -102,6 +102,24 @@ python test_ui_elements.py
 - **CPUStressTestWindow**: CPU stress testing with performance scoring
 - **Features**: Multi-core stress testing, performance metrics, duration tracking
 
+#### `system_info_window.py`
+- **SystemSpecsWindow**: Detailed system specifications
+- **Features**: OS, CPU, RAM, GPU, Motherboard, Disk Usage
+- **Privacy**: Masked IP and MAC address visibility
+- **Export**: Copy-to-clipboard functionality
+
+#### `wifi_window.py`
+- **WifiWindow**: Wi-Fi Analysis tool
+- **Features**: Real-time signal monitoring, Nearby network frequency scanner, Channel analysis, BSSID detection
+- **Saved Networks**: View saved profiles, **Reveal Passwords**, Export list, Delete profiles.
+
+#### `windows_tools_window.py`
+- **WindowsToolsWindow**: System utilities and command runner
+- **Features**: Shortcuts to Task Manager, Device Manager, Services, etc.
+- **Advanced Tools**: **Temp Cleaner**, **Path Environment Editor**.
+- **Console**: Expanded with **100+ Commands** in 6 Categories (Network, System, Hardware, Security, Disk, Dev).
+- **Shortcuts**: Hosts File, Firewall, Add/Remove Programs, etc. (Cleaned up redundant internal shortcuts).
+
 ### Utility Modules (`utils/`)
 
 #### `logging.py`
@@ -112,5 +130,5 @@ python test_ui_elements.py
 
 ## Extra Info
 - For executable file:
-- pyinstaller --onefile -w ResourceChecker main.py 
+- pyinstaller --onefile -w -n ResourceChecker main.py 
 - OUTPUT_PATH_FOR_EXE: dist\\ResourceChecker.exe

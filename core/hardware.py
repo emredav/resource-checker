@@ -46,78 +46,9 @@ class HardwareMonitor:
 
     @staticmethod
     def get_cpu_temperature() -> Optional[float]:
-        """Advanced CPU temperature reading with multiple fallback strategies."""
+        """Advanced CPU temperature reading with prioritized strategies."""
         
-        # 1) WMI Win32_TemperatureProbe (more dynamic)
-        if IS_WINDOWS and wmi:
-            try:
-                if pythoncom and not getattr(_wmi_thread_local, "com_initialized", False):
-                    pythoncom.CoInitialize()
-                    _wmi_thread_local.com_initialized = True
-                    
-                # Try Win32_TemperatureProbe
-                w = wmi.WMI()
-                temp_probes = w.Win32_TemperatureProbe()
-                cpu_temps = []
-                for probe in temp_probes:
-                    if probe.CurrentReading and probe.CurrentReading > 0:
-                        # Win32_TemperatureProbe usually in Kelvin * 10 format
-                        temp_c = (probe.CurrentReading / 10.0) - 273.15
-                        if 0 < temp_c < 120:  # Reasonable temperature range
-                            cpu_temps.append(temp_c)
-                            
-                if cpu_temps:
-                    return sum(cpu_temps) / len(cpu_temps)
-                    
-            except Exception:
-                pass  # Silent fail
-                
-        # 2) psutil sensors_temperatures (Linux/Windows sensor drivers)
-        try:
-            temps = getattr(psutil, 'sensors_temperatures', lambda: {})()
-            cpu_temps = []
-            for sensor_name, entries in temps.items():
-                for entry in entries:
-                    if hasattr(entry, 'current') and entry.current:
-                        temp = entry.current
-                        label = getattr(entry, 'label', '').lower()
-                        # Filter CPU related temperatures
-                        if (any(keyword in label for keyword in ['cpu', 'core', 'processor', 'package']) or 
-                            any(keyword in sensor_name.lower() for keyword in ['cpu', 'core', 'coretemp'])):
-                            if 0 < temp < 120:  # Reasonable temperature range
-                                cpu_temps.append(temp)
-                                
-            if cpu_temps:
-                return sum(cpu_temps) / len(cpu_temps)
-        except Exception:
-            pass
-            
-        # 3) WMI ACPI ThermalZone (last resort, usually static)
-        if IS_WINDOWS and wmi:
-            try:
-                if pythoncom and not getattr(_wmi_thread_local, "com_initialized", False):
-                    pythoncom.CoInitialize()
-                    _wmi_thread_local.com_initialized = True
-                    
-                w_acpi = wmi.WMI(namespace="root\\wmi")
-                sensors = w_acpi.MSAcpi_ThermalZoneTemperature()
-                acpi_temps = []
-                for s in sensors:
-                    try:
-                        if hasattr(s, 'CurrentTemperature') and s.CurrentTemperature:
-                            temp_c = (s.CurrentTemperature / 10.0) - 273.15
-                            if 0 < temp_c < 120:
-                                acpi_temps.append(temp_c)
-                    except Exception:
-                        continue
-                        
-                if acpi_temps:
-                    return sum(acpi_temps) / len(acpi_temps)
-                    
-            except Exception:
-                pass
-                
-        # 4) OpenHardwareMonitor WMI (if OHM is running)
+        # Priority 1: OpenHardwareMonitor WMI (Best if running)
         if IS_WINDOWS and wmi:
             try:
                 w_ohm = wmi.WMI(namespace="root\\OpenHardwareMonitor")
@@ -130,14 +61,134 @@ class HardwareMonitor:
                         temp = float(sensor.Value)
                         if 0 < temp < 120:
                             cpu_temps.append(temp)
-                            
                 if cpu_temps:
                     return sum(cpu_temps) / len(cpu_temps)
-                    
             except Exception:
-                pass  # OHM not installed or no access
+                pass
+
+        # Priority 2: LibreHardwareMonitor WMI (Best if running)
+        if IS_WINDOWS and wmi:
+            try:
+                w_lhm = wmi.WMI(namespace="root\\LibreHardwareMonitor")
+                sensors = w_lhm.Sensor()
+                cpu_temps = []
+                for sensor in sensors:
+                    if (sensor.SensorType == 'Temperature' and 
+                        sensor.Name and 'cpu' in sensor.Name.lower() and
+                        sensor.Value is not None):
+                        temp = float(sensor.Value)
+                        if 0 < temp < 120:
+                            cpu_temps.append(temp)
+                if cpu_temps:
+                    return sum(cpu_temps) / len(cpu_temps)
+            except Exception:
+                pass
+
+        # Priority 3: Intel 'Esif_Temperature' (Best Native Driver)
+        if IS_WINDOWS and wmi:
+            try:
+                # Ensure COM is initialized for this thread
+                if pythoncom and not getattr(_wmi_thread_local, "com_initialized", False):
+                    pythoncom.CoInitialize()
+                    _wmi_thread_local.com_initialized = True
+
+                w_intel = wmi.WMI(namespace="root\\Intel\\Esif")
+                sensors = w_intel.Esif_Temperature()
+                esif_temps = []
+                for s in sensors:
+                    if hasattr(s, 'Temperature') and s.Temperature > 0:
+                        temp_val = float(s.Temperature)
+                        # Heuristic to detect scale
+                        if temp_val > 2000: # millidegrees?
+                            temp_c = temp_val / 1000.0
+                        elif temp_val > 200: # tenths?
+                            temp_c = temp_val / 10.0
+                        else:
+                            temp_c = temp_val
+                            
+                        if 0 < temp_c < 120:
+                            esif_temps.append(temp_c)
+                if esif_temps:
+                    return sum(esif_temps) / len(esif_temps)
+            except Exception:
+                pass
+
+        # Priority 4: Windows Performance Counters (Native OS)
+        if IS_WINDOWS and wmi:
+            try:
+                w_cimv2 = wmi.WMI(namespace="root\\cimv2")
+                thermals = w_cimv2.Win32_PerfFormattedData_Counters_ThermalZoneInformation()
+                perf_temps = []
+                for t in thermals:
+                    # 'Temperature' is usually in Kelvin
+                    if hasattr(t, 'Temperature') and t.Temperature > 0:
+                        temp_k = float(t.Temperature)
+                        temp_c = temp_k - 273.15
+                        if 0 < temp_c < 120:
+                            perf_temps.append(temp_c)
+                if perf_temps:
+                    return sum(perf_temps) / len(perf_temps)
+            except Exception:
+                pass
+
+        # Priority 5: psutil sensors (Cross-platform standard)
+        try:
+            temps = getattr(psutil, 'sensors_temperatures', lambda: {})()
+            cpu_temps = []
+            for sensor_name, entries in temps.items():
+                for entry in entries:
+                    if hasattr(entry, 'current') and entry.current:
+                        temp = entry.current
+                        label = getattr(entry, 'label', '').lower()
+                        if (any(keyword in label for keyword in ['cpu', 'core', 'processor', 'package']) or 
+                            any(keyword in sensor_name.lower() for keyword in ['cpu', 'core', 'coretemp'])):
+                            if 0 < temp < 120:
+                                cpu_temps.append(temp)
+            if cpu_temps:
+                return sum(cpu_temps) / len(cpu_temps)
+        except Exception:
+            pass
+
+        # Priority 6: Win32_TemperatureProbe (Legacy WMI)
+        if IS_WINDOWS and wmi:
+            try:
+                w = wmi.WMI()
+                temp_probes = w.Win32_TemperatureProbe()
+                cpu_temps = []
+                for probe in temp_probes:
+                    if probe.CurrentReading and probe.CurrentReading > 0:
+                        temp_c = (probe.CurrentReading / 10.0) - 273.15
+                        if 0 < temp_c < 120:
+                            cpu_temps.append(temp_c)
+                if cpu_temps:
+                    return sum(cpu_temps) / len(cpu_temps)
+            except Exception:
+                pass
+
+        # Priority 7: MSAcpi_ThermalZoneTemperature (Last Resort - often static)
+        if IS_WINDOWS and wmi:
+            try:
+                w_acpi = wmi.WMI(namespace="root\\wmi")
+                sensors = w_acpi.MSAcpi_ThermalZoneTemperature()
+                acpi_temps = []
+                for s in sensors:
+                    try:
+                        if hasattr(s, 'CurrentTemperature') and s.CurrentTemperature:
+                            temp_c = (s.CurrentTemperature / 10.0) - 273.15
+                            # Filter out suspicious exact static values if possible?
+                            # 27.9 is 3010.5 Kelvin. hard to hardcode ban.
+                            if 0 < temp_c < 120:
+                                acpi_temps.append(temp_c)
+                    except Exception:
+                        continue
+                if acpi_temps:
+                    return sum(acpi_temps) / len(acpi_temps)
+            except Exception:
+                pass
                 
-        return None  # No method succeeded
+        return None
+
+
 
     @staticmethod
     def get_nvidia_gpu_info() -> Tuple[Optional[float], Optional[float]]:

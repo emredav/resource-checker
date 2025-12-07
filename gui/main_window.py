@@ -14,7 +14,10 @@ from utils.logging import Logger, NetworkLogger, AutoLogger, FileManager
 from gui.resource_monitor_window import ResourceTempMonitorWindow
 from gui.stress_test_window import CPUStressTestWindow
 from gui.webhook_settings_window import WebhookSettingsWindow
-from gui.network_settings_window import NetworkSettingsWindow  # Added import
+from gui.network_settings_window import NetworkSettingsWindow
+from gui.system_info_window import SystemSpecsWindow
+from gui.wifi_window import WifiWindow
+from gui.windows_tools_window import WindowsToolsWindow  # Added import
 
 
 class SystemMonitorGUI:
@@ -34,7 +37,10 @@ class SystemMonitorGUI:
         self.temp_monitor_window = None
         self.stress_test_window = None
         self.webhook_settings_window = None
-        self.network_settings_window = None  # Added attribute
+        self.network_settings_window = None
+        self.system_specs_window = None
+        self.wifi_window = None
+        self.windows_tools_window = None  # Added attribute
 
         # Class instances
         self.process_monitor = ProcessMonitor(self.top_apps_count)
@@ -140,6 +146,15 @@ class SystemMonitorGUI:
 
         self.stress_test_btn = ttk.Button(button_frame, text=language_manager.get_text('cpu_stress_test'), command=self.open_cpu_stress_test)
         self.stress_test_btn.pack(side=tk.LEFT, padx=(10, 0))
+        
+        self.specs_btn = ttk.Button(button_frame, text=language_manager.get_text('system_specs_btn'), command=self.open_system_specs)
+        self.specs_btn.pack(side=tk.LEFT, padx=(10, 0))
+        
+        self.wifi_btn = ttk.Button(button_frame, text="Wi-Fi", command=self.open_wifi_analyzer)
+        self.wifi_btn.pack(side=tk.LEFT, padx=(10, 0))
+        
+        self.win_tools_btn = ttk.Button(button_frame, text="Windows Tools", command=self.open_windows_tools)
+        self.win_tools_btn.pack(side=tk.LEFT, padx=(10, 0))
 
     def _setup_info_frame(self, parent):
         """Setup system information frame."""
@@ -450,6 +465,7 @@ class SystemMonitorGUI:
             
         self.temp_monitor_btn.config(text=language_manager.get_text('resource_temp_monitor'))
         self.stress_test_btn.config(text=language_manager.get_text('cpu_stress_test'))
+        self.specs_btn.config(text=language_manager.get_text('system_specs_btn'))
 
     def _update_info_frame_texts(self):
         """Update system information frame texts."""
@@ -491,4 +507,28 @@ class SystemMonitorGUI:
         else:
             self.webhook_settings_window.lift()
             self.webhook_settings_window.focus_force()
+
+    def open_system_specs(self):
+        """Open System Specs window."""
+        if self.system_specs_window is None or not self.system_specs_window.winfo_exists():
+            self.system_specs_window = SystemSpecsWindow(self.root)
+        else:
+            self.system_specs_window.lift()
+            self.system_specs_window.focus_force()
+
+    def open_wifi_analyzer(self):
+        """Open Wi-Fi Analyzer window."""
+        if self.wifi_window is None or not self.wifi_window.winfo_exists():
+            self.wifi_window = WifiWindow(self.root)
+        else:
+            self.wifi_window.lift()
+            self.wifi_window.focus_force()
+
+    def open_windows_tools(self):
+        """Open Windows Tools window."""
+        if self.windows_tools_window is None or not self.windows_tools_window.winfo_exists():
+            self.windows_tools_window = WindowsToolsWindow(self.root)
+        else:
+            self.windows_tools_window.lift()
+            self.windows_tools_window.focus_force()
 
