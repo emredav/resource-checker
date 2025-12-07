@@ -78,7 +78,8 @@ def test_language_texts():
         'settings_frame', 'system_interval', 'network_interval', 'top_apps_count',
         'auto_log', 'webhook_settings', 'start_monitoring', 'stop_monitoring',
         'network_health_check', 'auto_network_monitoring', 'stop_auto_network',
-        'resource_temp_monitor', 'cpu_stress_test', 'language_english', 'language_turkish'
+        'resource_temp_monitor', 'cpu_stress_test', 'language_english', 'language_turkish',
+        'monitoring_options'
     ]
     
     missing_texts = []

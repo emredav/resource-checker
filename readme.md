@@ -25,8 +25,9 @@
 ```
 ResourceChecker/
 ├── main.py                           # entry point
-├── main_original.py                  # Backup of original monolithic file
 ├── test_structure.py                 # Validation test script
+├── test_ui_elements.py               # UI Unit Tests
+├── test_language.py                  # Language Unit Tests
 ├── requirements.txt                  # Project dependencies
 ├── language_config.json             # Language preference storage
 ├── logs/                            # Generated log files
@@ -35,13 +36,20 @@ ResourceChecker/
 │   ├── language.py                  # Internationalization & language management
 │   ├── system_info.py              # System monitoring & process tracking
 │   ├── hardware.py                 # CPU/GPU temperature & hardware monitoring
-│   └── network.py                  # Network health checking & webhook notifications
+│   ├── network.py                  # Network health checking & webhook notifications
+│   ├── wifi_analyzer.py            # Wi-Fi analysis logic
+│   ├── command_library.py          # Windows command library definition
+│   └── windows_utils.py            # Windows specific utilities
 ├── gui/                            # User interface modules
 │   ├── __init__.py                 # GUI package initialization
 │   ├── main_window.py             # Main application window
 │   ├── resource_monitor_window.py # Resource & temperature monitoring window
 │   ├── network_settings_window.py # Network settings window
-│   └── stress_test_window.py      # CPU stress testing window
+│   ├── stress_test_window.py      # CPU stress testing window
+│   ├── system_info_window.py      # System specs window
+│   ├── wifi_window.py             # Wi-Fi Analyzer window
+│   ├── webhook_settings_window.py # Webhook settings window
+│   └── windows_tools_window.py    # Windows Tools window
 └── utils/                          # Utility modules
     ├── __init__.py                # Utils package initialization
     └── logging.py                 # Logging, file management & auto-logging
@@ -90,7 +98,11 @@ python test_ui_elements.py
 
 #### `main_window.py`
 - **SystemMonitorGUI**: Main application interface
-- **Features**: System monitoring, network health, process tracking, logging
+- **Features**: 
+    - System monitoring (CPU, RAM, Network) with **Toggleable Priority**.
+    - **Top Apps Monitoring**: Tracks up to 10 apps for CPU, RAM, and Network.
+    - **Dynamic Settings**: Change monitoring intervals and app counts on the fly.
+    - Network health connection testing & Webhook integrations.
 - **Integration**: Launches resource monitor and stress test windows
 
 #### `resource_monitor_window.py`

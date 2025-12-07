@@ -301,3 +301,33 @@ class ProcessMonitor:
         # Sort by network score and return specified count
         network_processes.sort(key=lambda x: x['network_score'], reverse=True)
         return network_processes[:self.top_count]
+
+    def get_top_memory_processes(self) -> List[Dict]:
+        """Get top memory consuming processes."""
+        processes = []
+
+        try:
+            # Get all processes
+            for proc in psutil.process_iter(['pid', 'name', 'memory_info']):
+                try:
+                    mem_info = proc.info['memory_info']
+                    if mem_info:
+                        memory_mb = mem_info.rss / 1024 / 1024  # Convert to MB
+                        
+                        # Filter system processes if needed, similar to CPU
+                        if memory_mb > 10: # Filter very small processes
+                             processes.append({
+                                'name': proc.info['name'],
+                                'memory': memory_mb,
+                                'pid': proc.info['pid']
+                            })
+
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    continue
+
+        except Exception as e:
+            print(f"Error getting memory process list: {str(e)}")
+
+        # Sort by memory usage and return specified count
+        processes.sort(key=lambda x: x['memory'], reverse=True)
+        return processes[:self.top_count]

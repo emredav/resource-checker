@@ -40,7 +40,13 @@ class SystemMonitorGUI:
         self.network_settings_window = None
         self.system_specs_window = None
         self.wifi_window = None
-        self.windows_tools_window = None  # Added attribute
+        self.wifi_window = None
+        self.windows_tools_window = None
+
+        # Monitoring Priority Variables
+        self.monitor_cpu_var = tk.BooleanVar(value=True)
+        self.monitor_ram_var = tk.BooleanVar(value=True)
+        self.monitor_network_var = tk.BooleanVar(value=True)
 
         # Class instances
         self.process_monitor = ProcessMonitor(self.top_apps_count)
@@ -92,7 +98,7 @@ class SystemMonitorGUI:
         self.top_apps_label = ttk.Label(self.settings_frame, text=language_manager.get_text('top_apps_count'))
         self.top_apps_label.grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
         self.top_apps_var = tk.StringVar(value="3")
-        top_apps_combo = ttk.Combobox(self.settings_frame, textvariable=self.top_apps_var, values=["3", "4", "5", "6"], width=5, state="readonly")
+        top_apps_combo = ttk.Combobox(self.settings_frame, textvariable=self.top_apps_var, values=[str(i) for i in range(3, 11)], width=5, state="readonly")
         top_apps_combo.grid(row=1, column=1, padx=(5, 20), sticky=tk.W, pady=(10, 0))
         top_apps_combo.bind("<<ComboboxSelected>>", self._on_top_apps_changed)
 
@@ -129,11 +135,22 @@ class SystemMonitorGUI:
         button_frame = ttk.Frame(parent)
         button_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
 
-        self.start_btn = ttk.Button(button_frame, text=language_manager.get_text('start_monitoring'), command=self.start_monitoring)
-        self.start_btn.pack(side=tk.LEFT, padx=(0, 5))
+        # Priority Checkboxes
+        # Monitoring Options Frame (GroupBox)
+        self.monitor_frame = ttk.LabelFrame(button_frame, text=language_manager.get_text('monitoring_options'), padding="5")
+        self.monitor_frame.pack(side=tk.LEFT, padx=(0, 10), fill=tk.Y)
 
-        self.stop_btn = ttk.Button(button_frame, text=language_manager.get_text('stop_monitoring'), command=self.stop_monitoring, state='disabled')
-        self.stop_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.chk_cpu = ttk.Checkbutton(self.monitor_frame, text=language_manager.get_text('monitor_cpu'), variable=self.monitor_cpu_var)
+        self.chk_cpu.pack(side=tk.LEFT, padx=(5, 5))
+        
+        self.chk_ram = ttk.Checkbutton(self.monitor_frame, text=language_manager.get_text('monitor_ram'), variable=self.monitor_ram_var)
+        self.chk_ram.pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.chk_net = ttk.Checkbutton(self.monitor_frame, text=language_manager.get_text('monitor_network'), variable=self.monitor_network_var)
+        self.chk_net.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.toggle_monitoring_btn = ttk.Button(button_frame, text=language_manager.get_text('start_monitoring'), command=self.toggle_monitoring)
+        self.toggle_monitoring_btn.pack(side=tk.LEFT, padx=(0, 10))
 
         self.health_btn = ttk.Button(button_frame, text=language_manager.get_text('network_health_check'), command=self.network_health_check)
         self.health_btn.pack(side=tk.LEFT, padx=(0, 10))
@@ -195,6 +212,16 @@ class SystemMonitorGUI:
             self.network_tree.column(col, width=100, anchor='center')
         self.network_tree.grid(row=0, column=0, sticky=(tk.W, tk.E))
 
+        self.ram_processes_frame = ttk.LabelFrame(processes_container, text=language_manager.get_text('top_ram_apps'), padding="10")
+        self.ram_processes_frame.grid(row=0, column=2, sticky=(tk.W, tk.E), padx=(5, 0))
+
+        ram_columns = ('Application', 'RAM MB')
+        self.ram_tree = ttk.Treeview(self.ram_processes_frame, columns=ram_columns, show='headings', height=6)
+        for col in ram_columns:
+            self.ram_tree.heading(col, text=col)
+            self.ram_tree.column(col, width=120, anchor='center')
+        self.ram_tree.grid(row=0, column=0, sticky=(tk.W, tk.E))
+
     def _setup_log_frames(self, parent):
         """Setup log areas."""
         log_container = ttk.Frame(parent)
@@ -252,6 +279,13 @@ class SystemMonitorGUI:
         except ValueError:
             pass
 
+    def toggle_monitoring(self):
+        """Toggle monitoring state."""
+        if self.monitoring:
+            self.stop_monitoring()
+        else:
+            self.start_monitoring()
+
     def start_monitoring(self):
         """Start monitoring."""
         if not self.monitoring:
@@ -263,8 +297,8 @@ class SystemMonitorGUI:
                 self.system_interval = 60
 
             self.monitoring = True
-            self.start_btn.config(state='disabled')
-            self.stop_btn.config(state='normal')
+            self.toggle_monitoring_btn.config(text=language_manager.get_text('stop_monitoring'))
+            
             self.monitor_thread = threading.Thread(target=self._monitor_system_worker, daemon=True)
             self.monitor_thread.start()
             self.logger.log(language_manager.get_text('monitoring_started').format(self.system_interval))
@@ -272,26 +306,93 @@ class SystemMonitorGUI:
     def stop_monitoring(self):
         """Stop monitoring."""
         self.monitoring = False
-        self.start_btn.config(state='normal')
-        self.stop_btn.config(state='disabled')
+        self.toggle_monitoring_btn.config(text=language_manager.get_text('start_monitoring'))
         self.logger.log(language_manager.get_text('monitoring_stopped'))
 
     def _monitor_system_worker(self):
         """System monitoring worker thread."""
         while self.monitoring:
             try:
-                cpu_percent = SystemInfo.get_cpu_usage()
-                memory = SystemInfo.get_memory_info()
-                net_sent, net_recv, net_total = SystemInfo.get_network_usage()
-                top_cpu_processes = self.process_monitor.get_top_cpu_processes()
-                top_network_processes = self.process_monitor.get_top_network_processes()
+                # Initialize variables
+                cpu_percent = 0
+                memory = None
+                net_sent, net_recv, net_total = 0, 0, 0
+                top_cpu_processes = []
+                top_ram_processes = []
+                top_network_processes = []
+                
+                # Fetch data based on selection
+                if self.monitor_cpu_var.get():
+                    cpu_percent = SystemInfo.get_cpu_usage()
+                    top_cpu_processes = self.process_monitor.get_top_cpu_processes()
+                
+                if self.monitor_ram_var.get():
+                    memory = SystemInfo.get_memory_info()
+                    top_ram_processes = self.process_monitor.get_top_memory_processes()
+                else: 
+                     # Get basic memory info even if not monitoring apps, for the main label
+                    memory = SystemInfo.get_memory_info()
 
+                if self.monitor_network_var.get():
+                    net_sent, net_recv, net_total = SystemInfo.get_network_usage()
+                    top_network_processes = self.process_monitor.get_top_network_processes()
+                
+                # Update GUI
                 self.root.after(0, lambda: self._update_system_gui(cpu_percent, memory, net_sent, net_recv, net_total))
-                self.root.after(0, lambda: self._update_process_trees(top_cpu_processes, top_network_processes))
-                self.webhook_notifier.check_and_notify_cpu(cpu_percent)
+                self.root.after(0, lambda: self._update_process_trees(top_cpu_processes, top_network_processes, top_ram_processes))
+                
+                if self.monitor_cpu_var.get():
+                    self.webhook_notifier.check_and_notify_cpu(cpu_percent)
 
-                log_msg = f"CPU: {cpu_percent:.1f}%, RAM: {memory.percent:.1f}%, Network: ↑{net_sent / 1024:.1f} KB/s ↓{net_recv / 1024:.1f} KB/s"
-                self.root.after(0, lambda msg=log_msg: self.logger.log(msg))
+                # Construct Log Message
+                log_parts = []
+                if self.monitor_cpu_var.get():
+                    log_parts.append(f"CPU: {cpu_percent:.1f}%")
+                if self.monitor_ram_var.get() and memory:
+                    log_parts.append(f"RAM: {memory.percent:.1f}%")
+                if self.monitor_network_var.get():
+                    log_parts.append(f"Network: ↑{net_sent / 1024:.1f} KB/s ↓{net_recv / 1024:.1f} KB/s")
+                
+                if log_parts:
+                    log_msg = ", ".join(log_parts)
+                    self.root.after(0, lambda msg=log_msg: self.logger.log(msg))
+                
+                # Granular App Logging (if enabled and selected)
+                if log_parts: # Only log details if we are logging main stats
+                     # Log Top CPU Apps
+                    if self.monitor_cpu_var.get() and top_cpu_processes:
+                         header = language_manager.get_text('log_header_cpu')
+                         items = []
+                         for idx, proc in enumerate(top_cpu_processes, 1):
+                             item = language_manager.get_text('log_item_cpu').format(proc['name'], f"{proc['cpu']:.1f}")
+                             items.append(f"{idx}- {item}")
+                         
+                         full_msg = f"{header} " + " ".join(items)
+                         self.root.after(0, lambda m=full_msg: self.logger.log(m))
+
+                    # Log Top RAM Apps
+                    if self.monitor_ram_var.get() and top_ram_processes:
+                         header = language_manager.get_text('log_header_ram')
+                         items = []
+                         for idx, proc in enumerate(top_ram_processes, 1):
+                             item = language_manager.get_text('log_item_ram').format(proc['name'], f"{proc['memory']:.1f}")
+                             items.append(f"{idx}- {item}")
+                         
+                         full_msg = f"{header} " + " ".join(items)
+                         self.root.after(0, lambda m=full_msg: self.logger.log(m))
+
+                    # Log Top Network Apps
+                    if self.monitor_network_var.get() and top_network_processes:
+                         header = language_manager.get_text('log_header_net')
+                         items = []
+                         for idx, proc in enumerate(top_network_processes, 1):
+                             total_kb = (proc['network_score']) # Simplified for log
+                             item = language_manager.get_text('log_item_net').format(proc['name'], f"{total_kb:.1f}")
+                             items.append(f"{idx}- {item}")
+                         
+                         full_msg = f"{header} " + " ".join(items)
+                         self.root.after(0, lambda m=full_msg: self.logger.log(m))
+
                 time.sleep(self.system_interval)
             except Exception as e:
                 self.root.after(0, lambda: self.logger.log(f"Error: {str(e)}", "error"))
@@ -299,22 +400,39 @@ class SystemMonitorGUI:
 
     def _update_system_gui(self, cpu_percent, memory, net_sent, net_recv, net_total):
         """Update system GUI."""
-        self.cpu_label.config(text=f"CPU Usage: {cpu_percent:.1f}%")
-        self.memory_label.config(text=f"RAM Usage: {memory.percent:.1f}%")
-        self.network_label.config(text=f"Network: ↑{net_sent / 1024:.1f} KB/s ↓{net_recv / 1024:.1f} KB/s")
+        if self.monitor_cpu_var.get():
+            self.cpu_label.config(text=f"CPU Usage: {cpu_percent:.1f}%")
+        
+        if memory: # Always update RAM label if we have info
+             self.memory_label.config(text=f"RAM Usage: {memory.percent:.1f}%")
+        
+        if self.monitor_network_var.get():
+            self.network_label.config(text=f"Network: ↑{net_sent / 1024:.1f} KB/s ↓{net_recv / 1024:.1f} KB/s")
 
-    def _update_process_trees(self, cpu_processes, network_processes):
+    def _update_process_trees(self, cpu_processes, network_processes, ram_processes=None):
         """Update process tables."""
+        
+        # CPU Tree
         for item in self.cpu_tree.get_children():
             self.cpu_tree.delete(item)
-        for proc in cpu_processes:
-            self.cpu_tree.insert('', 'end', values=(proc['name'], f"{proc['cpu']:.1f}%", f"{proc['memory']:.1f} MB"))
+        if cpu_processes:
+             for proc in cpu_processes:
+                self.cpu_tree.insert('', 'end', values=(proc['name'], f"{proc['cpu']:.1f}%", f"{proc['memory']:.1f} MB"))
 
+        # Network Tree
         for item in self.network_tree.get_children():
             self.network_tree.delete(item)
-        for proc in network_processes:
-            upload_kb, download_kb = proc['network_score'] * 0.3, proc['network_score'] * 0.7
-            self.network_tree.insert('', 'end', values=(proc['name'], f"{upload_kb:.1f}", f"{download_kb:.1f}", f"{(upload_kb + download_kb):.1f}", f"{proc['connections']} active"))
+        if network_processes:
+            for proc in network_processes:
+                upload_kb, download_kb = proc['network_score'] * 0.3, proc['network_score'] * 0.7
+                self.network_tree.insert('', 'end', values=(proc['name'], f"{upload_kb:.1f}", f"{download_kb:.1f}", f"{(upload_kb + download_kb):.1f}", f"{proc['connections']} active"))
+        
+        # RAM Tree (New)
+        if ram_processes is not None:
+             for item in self.ram_tree.get_children():
+                self.ram_tree.delete(item)
+             for proc in ram_processes:
+                self.ram_tree.insert('', 'end', values=(proc['name'], f"{proc['memory']:.1f} MB"))
 
     def toggle_auto_log(self):
         """Toggle auto log functionality."""
@@ -453,8 +571,18 @@ class SystemMonitorGUI:
 
     def _update_control_buttons_texts(self):
         """Update control buttons texts."""
-        self.start_btn.config(text=language_manager.get_text('start_monitoring'))
-        self.stop_btn.config(text=language_manager.get_text('stop_monitoring'))
+        # Update monitoring frame title
+        self.monitor_frame.config(text=language_manager.get_text('monitoring_options'))
+        
+        self.chk_cpu.config(text=language_manager.get_text('monitor_cpu'))
+        self.chk_ram.config(text=language_manager.get_text('monitor_ram'))
+        self.chk_net.config(text=language_manager.get_text('monitor_network'))
+
+        if self.monitoring:
+            self.toggle_monitoring_btn.config(text=language_manager.get_text('stop_monitoring'))
+        else:
+            self.toggle_monitoring_btn.config(text=language_manager.get_text('start_monitoring'))
+
         self.health_btn.config(text=language_manager.get_text('network_health_check'))
         
         # Network monitoring button text depends on current state
@@ -482,6 +610,7 @@ class SystemMonitorGUI:
         """Update process frame texts."""
         self.cpu_processes_frame.config(text=language_manager.get_text('top_cpu_apps'))
         self.network_processes_frame.config(text=language_manager.get_text('top_network_apps'))
+        self.ram_processes_frame.config(text=language_manager.get_text('top_ram_apps'))
 
     def _update_log_frames_texts(self):
         """Update log frame texts."""

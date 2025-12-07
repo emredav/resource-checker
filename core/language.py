@@ -134,6 +134,23 @@ LANGUAGE_DICT = {
         'language_english': 'English',
         'language_turkish': 'Türkçe',
 
+        # --- Added: RAM & Monitoring Options ---
+        'top_ram_apps': 'Top RAM Consuming Apps',
+        'monitor_cpu': 'Monitor CPU',
+        'monitor_ram': 'Monitor RAM',
+        'monitor_network': 'Monitor Network',
+        'monitoring_options': 'Monitoring Options',
+        'log_app_detail_cpu': 'Top CPU: {0} ({1}%)',
+        'log_app_detail_ram': 'Top RAM: {0} ({1} MB)',
+        'log_app_detail_net': 'Top Net: {0} ({1} KB/s)',
+        'log_header_cpu': 'Top CPU:',
+        'log_header_ram': 'Top RAM:',
+        'log_header_net': 'Top Net:',
+        'log_item_cpu': '{0} ({1}%)',
+        'log_item_ram': '{0} ({1} MB)',
+        'log_item_net': '{0} ({1} KB/s)',
+
+
         # --- Added: CPU Stress Test extra labels ---
         'per_core_score': 'Per-Core Score:',
         'sustainability': 'Sustainability:',
@@ -459,6 +476,23 @@ LANGUAGE_DICT = {
         # Language Toggle
         'language_english': 'English',
         'language_turkish': 'Türkçe',
+
+        # --- Eklenen: RAM & İzleme Seçenekleri ---
+        'top_ram_apps': 'En Çok RAM Kullanan Uygulamalar',
+        'monitor_cpu': 'CPU İzle',
+        'monitor_ram': 'RAM İzle',
+        'monitor_network': 'Network İzle',
+        'monitoring_options': 'İzleme Seçenekleri',
+        'log_app_detail_cpu': 'Top CPU: {0} (%{1})',
+        'log_app_detail_ram': 'Top RAM: {0} ({1} MB)',
+        'log_app_detail_net': 'Top Net: {0} ({1} KB/s)',
+        'log_header_cpu': 'Top CPU:',
+        'log_header_ram': 'Top RAM:',
+        'log_header_net': 'Top Net:',
+        'log_item_cpu': '{0} (%{1})',
+        'log_item_ram': '{0} ({1} MB)',
+        'log_item_net': '{0} ({1} KB/s)',
+
 
         # --- Eklenen: CPU Stres Testi ek etiketler ---
         'per_core_score': 'Çekirdek Başına Puan:',
