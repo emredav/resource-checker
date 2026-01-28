@@ -6,9 +6,10 @@ A System monitoring application that tracks CPU, GPU, and RAM usage,
 performs network health checks, and provides detailed logging capabilities.
 
 Author: Emre Daver
-Version: 1.0.0
+Version: 2.1.1
 """
 
+import multiprocessing
 import tkinter as tk
 from gui.main_window import SystemMonitorGUI
 
@@ -21,4 +22,5 @@ def main():
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()
