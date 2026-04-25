@@ -4,6 +4,7 @@ Main System Monitor GUI for ResourceChecker application.
 
 import time
 import threading
+import platform
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 
@@ -17,7 +18,11 @@ from gui.webhook_settings_window import WebhookSettingsWindow
 from gui.network_settings_window import NetworkSettingsWindow
 from gui.system_info_window import SystemSpecsWindow
 from gui.wifi_window import WifiWindow
-from gui.windows_tools_window import WindowsToolsWindow  # Added import
+
+if platform.system() == 'Windows':
+    from gui.windows_tools_window import WindowsToolsWindow
+else:
+    WindowsToolsWindow = None
 
 
 class SystemMonitorGUI:
@@ -170,8 +175,11 @@ class SystemMonitorGUI:
         self.wifi_btn = ttk.Button(button_frame, text="Wi-Fi", command=self.open_wifi_analyzer)
         self.wifi_btn.pack(side=tk.LEFT, padx=(10, 0))
         
-        self.win_tools_btn = ttk.Button(button_frame, text="Windows Tools", command=self.open_windows_tools)
-        self.win_tools_btn.pack(side=tk.LEFT, padx=(10, 0))
+        if WindowsToolsWindow is not None:
+            self.win_tools_btn = ttk.Button(button_frame, text="Windows Tools", command=self.open_windows_tools)
+            self.win_tools_btn.pack(side=tk.LEFT, padx=(10, 0))
+        else:
+            self.win_tools_btn = None
 
     def _setup_info_frame(self, parent):
         """Setup system information frame."""
@@ -655,6 +663,9 @@ class SystemMonitorGUI:
 
     def open_windows_tools(self):
         """Open Windows Tools window."""
+        if WindowsToolsWindow is None:
+            return
+
         if self.windows_tools_window is None or not self.windows_tools_window.winfo_exists():
             self.windows_tools_window = WindowsToolsWindow(self.root)
         else:

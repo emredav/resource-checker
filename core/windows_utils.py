@@ -1,7 +1,12 @@
 import subprocess
 import os
 import shutil
-import winreg
+import platform
+
+if platform.system() == 'Windows':
+    import winreg
+else:
+    winreg = None
 
 class WindowsUtils:
     
@@ -35,6 +40,10 @@ class WindowsUtils:
     @staticmethod
     def launch_tool(tool_key: str):
         """Launch a Windows system tool."""
+        if platform.system() != 'Windows':
+            print('Windows tools are only available on Windows.')
+            return
+
         cmd = WindowsUtils.TOOLS.get(tool_key)
         if cmd:
             try:
@@ -85,6 +94,9 @@ class WindowsUtils:
     @staticmethod
     def get_path_variable(scope='user') -> list:
         """Get PATH variable as list. Scope: 'user' or 'system'."""
+        if winreg is None:
+            return []
+
         try:
             if scope == 'user':
                 key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment", 0, winreg.KEY_READ)
@@ -103,6 +115,9 @@ class WindowsUtils:
     @staticmethod
     def set_path_variable(scope, path_list) -> bool:
         """Set PATH variable. Scope: 'user' or 'system'."""
+        if winreg is None:
+            return False
+
         try:
             new_path_str = ";".join(path_list)
             

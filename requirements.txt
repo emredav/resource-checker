@@ -13,4 +13,4 @@ setuptools==80.9.0
 urllib3==2.5.0
 
 GPUtil~=1.4.0
-WMI~=1.5.1
+WMI~=1.5.1; sys_platform == 'win32'

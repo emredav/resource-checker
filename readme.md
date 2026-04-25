@@ -19,6 +19,32 @@
     ```bash
     pip install -r requirements.txt
     ```
+    On non-Windows systems, Windows-only packages are skipped automatically.
+    Windows-only tools in the GUI remain available on Windows and are hidden or disabled elsewhere.
+
+3.  **Linux Prerequisites:**
+    `tkinter` is part of Python, but it also needs the system Tk/Tcl libraries. Install the matching package for your distribution before running the app.
+
+    * **Arch / CachyOS**:
+        ```bash
+        sudo pacman -S tk
+        ```
+    * **Debian / Ubuntu**:
+        ```bash
+        sudo apt install python3-tk
+        ```
+    * **Fedora**:
+        ```bash
+        sudo dnf install python3-tkinter
+        ```
+    * **openSUSE**:
+        ```bash
+        sudo zypper install python3-tk
+        ```
+    * **Alpine**:
+        ```bash
+        sudo apk add tk tcl
+        ```
     
 ## Directory Structure
 
